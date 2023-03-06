@@ -17,3 +17,11 @@ func initRouting(e *echo.Echo) {
 	e.GET("/users/:id", getUser)
 }
 
+func hello(c echo.Context) error {
+	return c.String(http.StatusOK, "Hello, World")
+}
+
+func getUser(c echo.Context) error {
+	id := c.Param("id")
+	return c.String(http.StatusOK, id)
+}
