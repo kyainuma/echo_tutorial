@@ -15,6 +15,7 @@ func main() {
 func initRouting(e *echo.Echo) {
 	e.GET("/", hello)
 	e.GET("/users/:id", getUser)
+	e.GET("/show", show)
 }
 
 func hello(c echo.Context) error {
@@ -24,4 +25,10 @@ func hello(c echo.Context) error {
 func getUser(c echo.Context) error {
 	id := c.Param("id")
 	return c.String(http.StatusOK, id)
+}
+
+func show(c echo.Context) error {
+	team := c.QueryParam("team")
+	member := c.QueryParam("member")
+	return c.String(http.StatusOK, "team:" + team + ", member:" + member)
 }
