@@ -8,8 +8,12 @@ import (
 
 func main() {
 	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
+	initRouting(e)
 	e.Logger.Fatal(e.Start(":1323"))
 }
+
+func initRouting(e *echo.Echo) {
+	e.GET("/", hello)
+	e.GET("/users/:id", getUser)
+}
+
