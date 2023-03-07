@@ -8,6 +8,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type User struct {
+	Name  string `json:"name" xml:"name" form:"name" query:"name"`
+	Email string `json:"email" xml:"email" form:"email" query:"email"`
+}
+
 func main() {
 	e := echo.New()
 	initRouting(e)
@@ -19,6 +24,7 @@ func initRouting(e *echo.Echo) {
 	e.GET("/users/:id", getUser)
 	e.GET("/show", show)
 	e.POST("/save", save)
+	e.POST("/users", userSave)
 }
 
 func hello(c echo.Context) error {
@@ -62,4 +68,12 @@ func save(c echo.Context) error {
 	}
 
 	return c.HTML(http.StatusOK, "<b>Thank you! " + name + "</b>")
+}
+
+func userSave(c echo.Context) error {
+	u := new(User)
+	if err := c.Bind(u); err != nil {
+		return err
+	}
+	return c.JSON(http.StatusCreated, u)
 }
