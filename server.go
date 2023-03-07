@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 )
 
 type User struct {
@@ -20,6 +21,16 @@ func main() {
 	// Root level middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	if l, ok := e.Logger.(*log.Logger); ok {
+		l.SetHeader("${time_rfc3339} ${level}")
+		l.SetLevel(log.INFO)
+	}
+
+	e.GET("/logger", func(c echo.Context) error {
+		e.Logger.Info("logger func is called")
+		return c.String(http.StatusOK, "logger!")
+	})
 
 	// Group level middleware
 	g := e.Group("/admin")
@@ -44,7 +55,7 @@ func main() {
 }
 
 func initRouting(e *echo.Echo) {
-	e.GET("/", hello)
+	e.GET("/hello", hello)
 	e.GET("/users/:id", getUser)
 	e.GET("/show", show)
 	e.POST("/save", save)
