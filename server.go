@@ -25,6 +25,8 @@ func initRouting(e *echo.Echo) {
 	e.GET("/show", show)
 	e.POST("/save", save)
 	e.POST("/users", userSave)
+	e.Static("/static", "assets")
+	e.File("/", "public/index.html")
 }
 
 func hello(c echo.Context) error {
