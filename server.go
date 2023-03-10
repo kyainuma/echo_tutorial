@@ -15,6 +15,28 @@ type User struct {
 	Email string `json:"email" xml:"email" form:"email" query:"email"`
 }
 
+// type User struct {
+// 	ID string `param:"id" query:"id" form:"id" json:"id" xml:"id"`
+// }
+
+type UserDTO struct {
+	Name string
+	Email string
+	IsAdmin bool
+}
+
+type CustomBinder struct {}
+
+func (cb *CustomBinder) Bind(i interface{}, c echo.Context) (err error) {
+	db := new(echo.DefaultBinder)
+	if err := db.Bind(i, c); err != echo.ErrUnsupportedMediaType {
+		return err
+	}
+
+	// カスタムバインドを実装
+	return
+}
+
 func main() {
 	e := echo.New()
 	initRouting(e)
@@ -62,6 +84,7 @@ func initRouting(e *echo.Echo) {
 	e.POST("/users", userSave)
 	e.Static("/static", "assets")
 	e.File("/", "public/index.html")
+	e.GET("/api/search", search)
 }
 
 func hello(c echo.Context) error {
@@ -69,6 +92,10 @@ func hello(c echo.Context) error {
 }
 
 func getUser(c echo.Context) error {
+	// var user User
+	// err := c.Bind(&user); if err != nil {
+	// 	return c.String(http.StatusBadRequest, "Bad Request")
+	// }
 	id := c.Param("id")
 	return c.String(http.StatusOK, id)
 }
@@ -110,7 +137,38 @@ func save(c echo.Context) error {
 func userSave(c echo.Context) error {
 	u := new(User)
 	if err := c.Bind(u); err != nil {
-		return err
+		return c.String(http.StatusBadRequest, "bad request")
 	}
-	return c.JSON(http.StatusCreated, u)
+
+	// セキュリティ向上のため別のStructにロードする
+	user := UserDTO {
+		Name: u.Name,
+		Email: u.Email,
+		IsAdmin: false, // バインドされるべきではないフィールドの公開を回避する
+	}
+
+	// executeSomeBusinessLogic(user)
+
+	return c.JSON(http.StatusOK, user)
+}
+
+func search(c echo.Context) error {
+	var opts struct {
+		IDs []int64
+		Active bool
+	}
+	length := int64(50) // デフォルト値
+
+	// バインドの例外処理
+	err := echo.QueryParamsBinder(c).
+		Int64("length", &length).
+		Int64s("ids", &opts.IDs).
+		Bool("active", &opts.Active).
+		BindError()
+
+	if err != nil {
+		return c.String(http.StatusBadRequest, "bad request")
+	}
+
+	return c.JSON(http.StatusOK, opts)
 }
