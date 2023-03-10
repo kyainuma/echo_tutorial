@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -37,8 +38,27 @@ func (cb *CustomBinder) Bind(i interface{}, c echo.Context) (err error) {
 	return
 }
 
+type CustomContext struct {
+	echo.Context
+}
+
+func (c *CustomContext) Foo() {
+	println("foo")
+}
+
+func (c *CustomContext) Bar() {
+	println("bar")
+}
+
 func main() {
 	e := echo.New()
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			cc := &CustomContext{c}
+			return next(cc)
+		}
+	})
+
 	initRouting(e)
 	// Root level middleware
 	e.Use(middleware.Logger())
@@ -85,6 +105,8 @@ func initRouting(e *echo.Echo) {
 	e.Static("/static", "assets")
 	e.File("/", "public/index.html")
 	e.GET("/api/search", search)
+	e.GET("/context", context)
+	e.GET("/parallel_context", parallelContext)
 }
 
 func hello(c echo.Context) error {
@@ -171,4 +193,30 @@ func search(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, opts)
+}
+
+func context(c echo.Context) error {
+	cc := c.(*CustomContext)
+	cc.Foo()
+	cc.Bar()
+	return cc.String(200, "OK")
+}
+
+func parallelContext(c echo.Context) error {
+	ca := make(chan string, 1)
+	r := c.Request()
+	method := r.Method
+
+	go func() {
+		fmt.Printf("Method: %s\n", method)
+
+		ca <- "Hay!"
+	}()
+
+	select {
+	case result := <-ca:
+		return c.String(http.StatusOK, "Result: " + result)
+	case <-c.Request().Context().Done():
+		return nil
+	}
 }
