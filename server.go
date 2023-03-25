@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"os"
@@ -41,7 +42,27 @@ type (
   CustomValidator struct {
     validator *validator.Validate
   }
+
+	Template struct {
+    templates *template.Template
+	}
+
+	TemplateRenderer struct {
+    templates *template.Template
+	}
 )
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
+
+func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	if viewContext, isMap := data.(map[string]interface{}); isMap {
+		viewContext["reverse"] = c.Echo().Reverse
+	}
+
+	return t.templates.ExecuteTemplate(w, name, data)
+}
 
 func (cv *CustomValidator) Validate(i interface{}) error {
 	if err := cv.validator.Struct(i); err != nil {
@@ -88,6 +109,20 @@ func customHTTPErrorHandler(err error, c echo.Context) {
 
 func main() {
 	e := echo.New()
+	renderer := &TemplateRenderer{
+		templates: template.Must(template.ParseGlob("*.html")),
+	}
+	e.Renderer = renderer
+	e.GET("/something", func(c echo.Context) error {
+		return c.Render(http.StatusOK, "template.html", map[string]interface{}{
+			"name": "Dolly!",
+		})
+	}).Name = "foobar"
+	// t := &Template{
+	// 	templates: template.Must(template.ParseGlob("public/views/*.html")),
+	// }
+	// e.Renderer = t
+	e.GET("/Hello", Hello)
 	e.HTTPErrorHandler = customHTTPErrorHandler
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -189,6 +224,10 @@ func initRouting(e *echo.Echo) {
 
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World")
+}
+
+func Hello(c echo.Context) error {
+	return c.Render(http.StatusOK, "hello", "World")
 }
 
 func getUser(c echo.Context) error {
