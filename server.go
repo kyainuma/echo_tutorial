@@ -15,9 +15,28 @@ import (
 
 type (
   User struct {
+		// 	ID string `param:"id" query:"id" form:"id" json:"id" xml:"id"`
     Name  string `json:"name" validate:"required"`
     Email string `json:"email" validate:"required,email"`
   }
+
+	UserDTO struct {
+		Name string
+		Email string
+		IsAdmin bool
+	}
+
+	CustomBinder struct {}
+
+	CustomContext struct {
+		echo.Context
+	}
+
+	CustomStruct struct {
+		Timestamp Timestamp `query:"timestamp"`
+	}
+
+	Timestamp time.Time
 
   CustomValidator struct {
     validator *validator.Validate
@@ -31,18 +50,6 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 	return nil
 }
 
-// type User struct {
-// 	ID string `param:"id" query:"id" form:"id" json:"id" xml:"id"`
-// }
-
-type UserDTO struct {
-	Name string
-	Email string
-	IsAdmin bool
-}
-
-type CustomBinder struct {}
-
 func (cb *CustomBinder) Bind(i interface{}, c echo.Context) (err error) {
 	db := new(echo.DefaultBinder)
 	if err := db.Bind(i, c); err != echo.ErrUnsupportedMediaType {
@@ -53,10 +60,6 @@ func (cb *CustomBinder) Bind(i interface{}, c echo.Context) (err error) {
 	return
 }
 
-type CustomContext struct {
-	echo.Context
-}
-
 func (c *CustomContext) Foo() {
 	println("foo")
 }
@@ -64,12 +67,6 @@ func (c *CustomContext) Foo() {
 func (c *CustomContext) Bar() {
 	println("bar")
 }
-
-type CustomStruct struct {
-	Timestamp Timestamp `query:"timestamp"`
-}
-
-type Timestamp time.Time
 
 func (t *Timestamp) UnmarshalParam(src string) error {
 	ts, err := time.Parse(time.RFC3339, src)
