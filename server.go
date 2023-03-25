@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,8 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 type User struct {
@@ -111,20 +108,21 @@ func main() {
 		return c.String(http.StatusOK, "/users")
 	}, track)
 
-	h2s := &http2.Server{
-		MaxConcurrentStreams: 250,
-		MaxReadFrameSize: 1048576,
-		IdleTimeout: 10 * time.Second,
-	}
-	s := http.Server {
-		Addr: ":8080",
-		Handler: h2c.NewHandler(e, h2s),
-		ReadTimeout: 30 * time.Second,
-		TLSConfig: &tls.Config{},
-	}
-	if err := s.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
-		log.Fatal(err)
-	}
+	// h2s := &http2.Server{
+	// 	MaxConcurrentStreams: 250,
+	// 	MaxReadFrameSize: 1048576,
+	// 	IdleTimeout: 10 * time.Second,
+	// }
+	// s := http.Server {
+	// 	Addr: ":8080",
+	// 	Handler: h2c.NewHandler(e, h2s),
+	// 	ReadTimeout: 30 * time.Second,
+	// 	TLSConfig: &tls.Config{},
+	// }
+	// if err := s.ListenAndServeTLS("server.crt", "server.key"); err != http.ErrServerClosed {
+	// 	log.Fatal(err)
+	// }
+	e.Logger.Fatal(e.Start(":1323"))
 }
 
 func initRouting(e *echo.Echo) {
