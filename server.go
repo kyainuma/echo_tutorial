@@ -7,14 +7,28 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 )
 
-type User struct {
-	Name  string `json:"name" xml:"name" form:"name" query:"name"`
-	Email string `json:"email" xml:"email" form:"email" query:"email"`
+type (
+  User struct {
+    Name  string `json:"name" validate:"required"`
+    Email string `json:"email" validate:"required,email"`
+  }
+
+  CustomValidator struct {
+    validator *validator.Validate
+  }
+)
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	if err := cv.validator.Struct(i); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return nil
 }
 
 // type User struct {
@@ -51,6 +65,18 @@ func (c *CustomContext) Bar() {
 	println("bar")
 }
 
+type CustomStruct struct {
+	Timestamp Timestamp `query:"timestamp"`
+}
+
+type Timestamp time.Time
+
+func (t *Timestamp) UnmarshalParam(src string) error {
+	ts, err := time.Parse(time.RFC3339, src)
+	*t = Timestamp(ts)
+	return err
+}
+
 func customHTTPErrorHandler(err error, c echo.Context) {
 	code := http.StatusInternalServerError
 	if he, ok := err.(*echo.HTTPError); ok {
@@ -71,6 +97,17 @@ func main() {
 			cc := &CustomContext{c}
 			return next(cc)
 		}
+	})
+	e.Validator = &CustomValidator{validator: validator.New()}
+	e.POST("/validate-users", func(c echo.Context) (err error) {
+		u := new(User)
+		if err = c.Bind(u); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+		if err = c.Validate(u); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+		return c.JSON(http.StatusOK, u)
 	})
 
 	initRouting(e)
@@ -108,6 +145,16 @@ func main() {
 		return c.String(http.StatusOK, "/users")
 	}, track)
 
+	e.GET("/query-param", func(c echo.Context) error {
+		name := c.QueryParam("name")
+		return c.String(http.StatusOK, name)
+	})
+
+	e.GET("users/:name", func(c echo.Context) error {
+		name := c.Param("name")
+		return c.String(http.StatusOK, name)
+	})
+
 	// h2s := &http2.Server{
 	// 	MaxConcurrentStreams: 250,
 	// 	MaxReadFrameSize: 1048576,
@@ -139,6 +186,8 @@ func initRouting(e *echo.Echo) {
 	e.GET("/write_cookie", writeCookie)
 	e.GET("/read_cookie", readCookie)
 	e.GET("/read_all_cookie", readAllCookies)
+	e.POST("/form", formValue)
+	e.GET("/timestamp", timestamp)
 }
 
 func hello(c echo.Context) error {
@@ -278,4 +327,17 @@ func readAllCookies(c echo.Context) error {
 		fmt.Println(cookie.Value)
 	}
 	return c.String(http.StatusOK, "read all the cookies")
+}
+
+func formValue(c echo.Context) error {
+	name := c.FormValue("name")
+	return c.String(http.StatusOK, name)
+}
+
+func timestamp(c echo.Context) error {
+	cs := &CustomStruct{}
+	if err := c.Bind(cs); err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, cs)
 }
